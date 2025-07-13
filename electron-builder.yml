@@ -1,0 +1,18 @@
+appId: com.liceo.app
+productName: Sistema Liceo
+copyright: Copyright © 2025
+
+files:
+  - "main"
+  - "package.json"
+  - "node_modules"
+
+extraResources:
+  - from: ".next/standalone"
+    to: "app/.next/standalone"
+  - from: "scripts"
+    to: "app/scripts"
+
+win:
+  target: nsis
+  icon: "public/favicon.ico" 
