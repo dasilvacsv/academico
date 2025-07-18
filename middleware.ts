@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   console.log("🔍 Middleware ejecutándose para:", pathname)
 
   // Rutas públicas que no requieren autenticación
-  const publicPaths = ["/login", "/olvide-mi-contrasena"]
+  const publicPaths = ["/login", "/olvide-mi-contrasena", "/registro"]
 
   if (publicPaths.includes(pathname)) {
     console.log("✅ Ruta pública, permitiendo acceso")

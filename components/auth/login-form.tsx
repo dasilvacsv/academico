@@ -7,43 +7,32 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 
-import { Eye, EyeOff, Loader2, ShieldAlert, Sparkles } from "lucide-react"
+import { Eye, EyeOff, Loader2, ShieldAlert, Sparkles, ShieldQuestion } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { login } from "@/actions/auth.actions"
+import { verifyPasswordAndGetQuestions, verifyAnswersAndLogin } from "@/actions/auth.actions"
 
+// Esquema de validación para ambos pasos
 const LoginSchema = z.object({
-  email: z
-    .string()
-    .email({ message: "Por favor, introduce un correo electrónico válido." }),
-  password: z
-    .string()
-    .min(1, { message: "La contraseña no puede estar vacía." }),
+  email: z.string().email({ message: "Por favor, introduce un correo electrónico válido." }),
+  password: z.string().min(1, { message: "La contraseña no puede estar vacía." }),
+  answer1: z.string().optional(),
+  answer2: z.string().optional(),
+  answer3: z.string().optional(),
 })
 
 type LoginValues = z.infer<typeof LoginSchema>
+type LoginStep = 'credentials' | 'questions';
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | undefined>("")
   const [isPending, startTransition] = useTransition()
+  const [loginStep, setLoginStep] = useState<LoginStep>('credentials');
+  const [questions, setQuestions] = useState<string[]>([]);
   const router = useRouter()
 
   const form = useForm<LoginValues>({
@@ -51,30 +40,46 @@ export function LoginForm() {
     defaultValues: {
       email: "admin@escuela.edu",
       password: "password123",
+      answer1: "",
+      answer2: "",
+      answer3: "",
     },
   })
 
   async function onSubmit(values: LoginValues) {
     setError("")
-
     startTransition(async () => {
       try {
-        const formData = new FormData()
-        formData.append("email", values.email)
-        formData.append("password", values.password)
+        if (loginStep === 'credentials') {
+          // --- PASO 1: VERIFICAR CONTRASEÑA ---
+          const formData = new FormData();
+          formData.append("email", values.email);
+          formData.append("password", values.password);
 
-        const result = await login(formData)
+          const result = await verifyPasswordAndGetQuestions(formData);
 
-        if (result?.error) {
-          setError(result.error)
-        } else if (result?.redirect) {
-          // Redirigir según el rol
-          router.push(result.redirect)
-          router.refresh()
+          if (result?.error) {
+            setError(result.error);
+          } else if (result?.success && result.questions) {
+            setQuestions(result.questions);
+            setLoginStep('questions'); // Cambiamos al siguiente paso
+          }
         } else {
-          // Redirección por defecto
-          router.push("/dashboard")
-          router.refresh()
+          // --- PASO 2: VERIFICAR PREGUNTAS Y LOGUEAR ---
+          const formData = new FormData();
+          formData.append("email", values.email); // Usamos el email ya validado
+          formData.append("answer1", values.answer1 || "");
+          formData.append("answer2", values.answer2 || "");
+          formData.append("answer3", values.answer3 || "");
+
+          const result = await verifyAnswersAndLogin(formData);
+
+          if (result?.error) {
+            setError(result.error);
+          } else if (result?.redirect) {
+            router.push(result.redirect);
+            router.refresh();
+          }
         }
       } catch (err) {
         setError("Ha ocurrido un error inesperado. Por favor, intenta de nuevo.")
@@ -91,130 +96,72 @@ export function LoginForm() {
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50 rounded-t-3xl"></div>
         
         <CardHeader className="relative text-center space-y-4 pb-8">
-          <div className="flex justify-center">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-lg opacity-20"></div>
-              <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-full">
-                <Sparkles className="h-6 w-6 text-white" />
-              </div>
+            <div className="flex justify-center">
+                <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-full">
+                    {loginStep === 'credentials' ? <Sparkles className="h-6 w-6 text-white" /> : <ShieldQuestion className="h-6 w-6 text-white" />}
+                </div>
             </div>
-          </div>
-          
-          <div className="space-y-2">
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              ¡Bienvenido de Nuevo!
-            </CardTitle>
-            <CardDescription className="text-slate-600 dark:text-slate-400">
-              Ingresa tus credenciales para acceder a tu panel de control
-            </CardDescription>
-          </div>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            {loginStep === 'credentials' ? '¡Bienvenido!' : 'Verificación de Seguridad'}
+          </CardTitle>
+          <CardDescription className="text-slate-600 dark:text-slate-400">
+            {loginStep === 'credentials' ? 'Ingresa tus credenciales para continuar.' : 'Responde tus preguntas para completar el inicio de sesión.'}
+          </CardDescription>
         </CardHeader>
         
         <CardContent className="relative space-y-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {error && (
-                <Alert variant="destructive" className="border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/50">
+                <Alert variant="destructive">
                   <ShieldAlert className="h-4 w-4" />
-                  <AlertTitle className="text-red-800 dark:text-red-200">Error de Autenticación</AlertTitle>
-                  <AlertDescription className="text-red-700 dark:text-red-300">{error}</AlertDescription>
+                  <AlertTitle>Error de Autenticación</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
-              <div className="space-y-5">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <FormLabel className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                        Correo Electrónico
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="email"
-                          placeholder="tu.correo@ejemplo.com"
-                          disabled={isPending}
-                          className="h-12 border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 transition-all duration-200"
-                        />
-                      </FormControl>
-                      <FormMessage />
+              {loginStep === 'credentials' ? (
+                // --- CAMPOS DE EMAIL Y CONTRASEÑA ---
+                <div className="space-y-5">
+                  <FormField control={form.control} name="email" render={({ field }) => (
+                    <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input {...field} type="email" disabled={isPending} /></FormControl><FormMessage /></FormItem>
+                  )} />
+                  <FormField control={form.control} name="password" render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between"><FormLabel>Contraseña</FormLabel><Link href="/olvide-mi-contrasena" className="text-sm font-medium text-blue-600 hover:underline">¿Olvidaste tu contraseña?</Link></div>
+                      <FormControl><div className="relative"><Input {...field} type={showPassword ? "text" : "password"} disabled={isPending} /><Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</Button></div></FormControl><FormMessage />
                     </FormItem>
-                  )}
-                />
+                  )} />
+                </div>
+              ) : (
+                // --- CAMPOS DE PREGUNTAS DE SEGURIDAD ---
+                <div className="space-y-5">
+                    {questions.map((q, i) => (
+                        <FormField key={i} control={form.control} name={`answer${i+1}` as 'answer1' | 'answer2' | 'answer3'} render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{q}</FormLabel>
+                                <FormControl><Input {...field} type="text" disabled={isPending} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    ))}
+                </div>
+              )}
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <FormLabel className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                          Contraseña
-                        </FormLabel>
-                        <Link
-                          href="/olvide-mi-contrasena"
-                          className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-                        >
-                          ¿Olvidaste tu contraseña?
-                        </Link>
-                      </div>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            {...field}
-                            type={showPassword ? "text" : "password"}
-                            placeholder="••••••••"
-                            disabled={isPending}
-                            className="h-12 pr-12 border-slate-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50 focus:bg-white dark:focus:bg-slate-800 transition-all duration-200"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                            onClick={() => setShowPassword(!showPassword)}
-                            disabled={isPending}
-                          >
-                            {showPassword ? (
-                              <EyeOff className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                            ) : (
-                              <Eye className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                            )}
-                          </Button>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all duration-300 transform hover:scale-[1.02]" 
-                disabled={isPending}
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Iniciando sesión...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-2 h-5 w-5" />
-                    Iniciar Sesión
-                  </>
-                )}
+              <Button type="submit" className="w-full h-12" disabled={isPending}>
+                {isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+                {loginStep === 'credentials' ? 'Siguiente' : 'Iniciar Sesión'}
               </Button>
             </form>
           </Form>
         </CardContent>
         
-        {/* Pie de página sin opción de registro */}
         <CardFooter className="relative flex flex-col items-center justify-center text-sm space-y-2 pt-4">
-          <p className="text-slate-600 dark:text-slate-400">Sistema de gestión escolar</p>
+            <p className="text-slate-600 dark:text-slate-400">¿No tienes una cuenta?{' '}
+                <Link href="/registro" className="font-medium text-blue-600 hover:underline">
+                    Regístrate aquí
+                </Link>
+            </p>
         </CardFooter>
       </Card>
     </div>

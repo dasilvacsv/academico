@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Sistema de información para el registro de matrícula escolar",
-  "author": "Tu Nombre o Nombre de la Empresa",
+  "author": "liceo ",
   "main": "main.js",
   "homepage": "./",
   "scripts": {

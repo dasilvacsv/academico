@@ -9,7 +9,7 @@ import { randomUUID } from "crypto"
 
 // --- REGISTRAR DOCENTE ---
 export async function registrarDocente(formData: FormData) {
-  await requireRole(["administrador", "director"])
+  await requireRole(["administrador", "director"]);
 
   const docenteData = {
     nombres: formData.get("nombres") as string,
@@ -18,56 +18,65 @@ export async function registrarDocente(formData: FormData) {
     especialidad: formData.get("especialidad") as string,
     telefono: formData.get("telefono") as string,
     correo_institucional: formData.get("correo_institucional") as string,
-  }
+  };
 
-  // Se define una transacción para asegurar que tanto el docente como su usuario se creen correctamente.
-  const transaction = db.transaction(async () => {
-    // 1. Verificar si la cédula o el correo ya existen
-    const existingStmt = db.prepare("SELECT id_docente FROM docentes WHERE cedula = ? OR correo_institucional = ?")
-    const existing = existingStmt.get(docenteData.cedula, docenteData.correo_institucional)
+  // 1. Hashear la contraseña FUERA de la transacción (operación asíncrona)
+  const password = (formData.get("password") as string) || "temporal123";
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // 2. Definir la transacción con una función SÍNCRONA
+  const transaction = db.transaction(() => {
+    // Verificar si la cédula o el correo ya existen
+    const existingStmt = db.prepare(
+      "SELECT id_docente FROM docentes WHERE cedula = ? OR correo_institucional = ?"
+    );
+    const existing = existingStmt.get(
+      docenteData.cedula,
+      docenteData.correo_institucional
+    );
 
     if (existing) {
-      throw new Error("Ya existe un docente con esta cédula o correo electrónico.")
+      throw new Error("Ya existe un docente con esta cédula o correo electrónico.");
     }
 
-    // 2. Insertar el nuevo docente
+    // Insertar el nuevo docente
     const insertDocenteStmt = db.prepare(
       `INSERT INTO docentes (id_docente, nombres, apellidos, cedula, especialidad, telefono, correo_institucional) 
        VALUES (?, ?, ?, ?, ?, ?, ?)`
-    )
+    );
     insertDocenteStmt.run(
-      randomUUID(), // Usar un UUID real en lugar de Date.now()
+      randomUUID(),
       docenteData.nombres,
       docenteData.apellidos,
       docenteData.cedula,
       docenteData.especialidad,
       docenteData.telefono,
-      docenteData.correo_institucional,
-    )
+      docenteData.correo_institucional
+    );
 
-    // 3. Crear el usuario para el docente
-    const password = (formData.get("password") as string) || "temporal123"
-    const hashedPassword = await bcrypt.hash(password, 10)
+    // Crear el usuario para el docente
     const insertUserStmt = db.prepare(
-      `INSERT INTO usuarios (id, email, password_hash, rol, nombre_completo) 
-       VALUES (?, ?, ?, ?, ?)`
-    )
+      // 3. Añadir la columna 'cedula' a la consulta
+      `INSERT INTO usuarios (id, email, password_hash, rol, nombre_completo, cedula) 
+       VALUES (?, ?, ?, ?, ?, ?)`
+    );
     insertUserStmt.run(
       randomUUID(),
       docenteData.correo_institucional,
-      hashedPassword,
+      hashedPassword, // Usamos la contraseña ya hasheada
       "docente",
       `${docenteData.nombres} ${docenteData.apellidos}`,
-    )
-  })
+      docenteData.cedula // 4. Añadir el valor de la cédula aquí
+    );
+  });
 
   try {
-    transaction() // Ejecutar la transacción
-    revalidatePath("/dashboard/docentes")
-    return { success: "Docente registrado exitosamente" }
+    transaction(); // Ejecutar la transacción
+    revalidatePath("/dashboard/docentes");
+    return { success: "Docente registrado exitosamente" };
   } catch (error: any) {
-    console.error("Error registrando docente:", error)
-    return { error: error.message || "Error interno del servidor" }
+    console.error("Error registrando docente:", error);
+    return { error: error.message || "Error interno del servidor" };
   }
 }
 

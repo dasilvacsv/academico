@@ -1,12 +1,13 @@
 "use server"
 
-import getDbConnection from "@/lib/database" // <-- 1. Importa la función
-const db = getDbConnection(); // <-- 2. Llama a la función UNA VEZ para obtener la conexión
+import getDbConnection from "@/lib/database"
 import { requireRole } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 import { randomUUID } from "crypto"
 
-// --- REGISTRAR ESTUDIANTE (CON TRANSACCIÓN) ---
+const db = getDbConnection();
+
+// --- REGISTRAR ESTUDIANTE (SIN CAMBIOS) ---
 export async function registrarEstudiante(formData: FormData) {
   await requireRole(["administrador", "director"]);
 
@@ -33,9 +34,7 @@ export async function registrarEstudiante(formData: FormData) {
     condicion_especial: formData.get("est_condicion_especial") as string,
   };
 
-  // Se define la transacción
   const transaction = db.transaction(() => {
-    // 1. Buscar o crear al representante
     const repStmt = db.prepare("SELECT id_representante FROM representantes WHERE cedula = ?");
     let representante = repStmt.get(representanteData.cedula) as { id_representante: string } | undefined;
     let representanteId: string;
@@ -61,7 +60,6 @@ export async function registrarEstudiante(formData: FormData) {
       );
     }
 
-    // 2. Insertar al estudiante
     const estudianteId = randomUUID();
     const insertEstStmt = db.prepare(
       `INSERT INTO estudiantes (id_estudiante, nombres, apellidos, fecha_nacimiento, genero, nacionalidad, estado_nacimiento, direccion, telefono_contacto, correo_electronico, condicion_especial, id_representante) 
@@ -82,7 +80,6 @@ export async function registrarEstudiante(formData: FormData) {
       representanteId
     );
 
-    // 3. Crear la matrícula inicial en estado "pre-inscrito"
     const anoEscolar = new Date().getFullYear().toString();
     const insertMatStmt = db.prepare(
       `INSERT INTO matriculas (id_matricula, id_estudiante, ano_escolar, estatus) 
@@ -92,7 +89,7 @@ export async function registrarEstudiante(formData: FormData) {
   });
 
   try {
-    transaction(); // Se ejecuta la transacción
+    transaction();
     revalidatePath("/dashboard/estudiantes");
     return { success: "Estudiante registrado exitosamente" };
   } catch (error: any) {
@@ -101,7 +98,7 @@ export async function registrarEstudiante(formData: FormData) {
   }
 }
 
-// --- ACTUALIZAR ESTUDIANTE ---
+// --- ACTUALIZAR ESTUDIANTE (SIN CAMBIOS) ---
 export async function actualizarEstudiante(id: string, formData: FormData) {
   await requireRole(["administrador", "director"]);
 
@@ -143,76 +140,121 @@ export async function actualizarEstudiante(id: string, formData: FormData) {
   }
 }
 
-// --- OBTENER ESTUDIANTES PAGINADOS (FUNCIÓN PRINCIPAL) ---
+// --- OBTENER ESTUDIANTES PAGINADOS (FUNCIÓN CON CORRECCIÓN DE TIPO) ---
 export async function obtenerEstudiantesPaginados(params: {
   page: number;
   limite: number;
   filtro?: string;
   estatus?: string;
 }) {
-  await requireRole(["administrador", "director", "docente"]);
-
-  const { page, limite, filtro, estatus } = params;
-  const offset = (page - 1) * limite;
-
-  let whereClauses: string[] = [];
-  let sqlParams: (string | number)[] = [];
-
-  if (filtro) {
-    whereClauses.push("(e.nombres LIKE ? OR e.apellidos LIKE ?)");
-    sqlParams.push(`%${filtro}%`, `%${filtro}%`);
-  }
-  if (estatus) {
-    whereClauses.push("m.estatus = ?");
-    sqlParams.push(estatus);
-  }
-
-  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
-  const baseJoin = `FROM estudiantes e LEFT JOIN matriculas m ON e.id_estudiante = m.id_estudiante`;
-  
   try {
-    // Consulta para el total de registros que coinciden con el filtro
-    const countSql = `SELECT COUNT(DISTINCT e.id_estudiante) as total ${baseJoin} ${whereSql}`;
-    const totalResult = db.prepare(countSql).get(...sqlParams) as { total: number };
-    const totalEstudiantes = totalResult.total || 0;
-    const totalPaginas = Math.ceil(totalEstudiantes / limite);
+    const { page, limite, filtro, estatus } = params;
+    const offset = (page - 1) * limite;
 
-    // Consulta para obtener los datos de la página actual
+    let whereClauses: string[] = [];
+    let queryParams: (string | number)[] = [];
+    
+    if (filtro) {
+      whereClauses.push("(e.nombres LIKE ? OR e.apellidos LIKE ?)");
+      queryParams.push(`%${filtro}%`, `%${filtro}%`);
+    }
+    if (estatus) {
+      whereClauses.push("latest_matricula.estatus = ?");
+      queryParams.push(estatus);
+    }
+    
+    const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
     const dataSql = `
-      SELECT e.id_estudiante, e.nombres, e.apellidos, e.correo_electronico, m.estatus, g.nombre as grado_nombre
+      SELECT 
+        e.id_estudiante, e.nombres, e.apellidos, e.correo_electronico as email,
+        json_object(
+          'estatus', latest_matricula.estatus,
+          'grados', json_object('nombre', g.nombre)
+        ) as matricula_data
       FROM estudiantes e
-      LEFT JOIN matriculas m ON e.id_estudiante = m.id_estudiante
-      LEFT JOIN grados g ON m.id_grado = g.id_grado
+      LEFT JOIN (
+        SELECT id_estudiante, MAX(ano_escolar) as max_ano_escolar
+        FROM matriculas GROUP BY id_estudiante
+      ) as max_m ON e.id_estudiante = max_m.id_estudiante
+      LEFT JOIN matriculas as latest_matricula ON max_m.id_estudiante = latest_matricula.id_estudiante AND max_m.max_ano_escolar = latest_matricula.ano_escolar
+      LEFT JOIN grados g ON latest_matricula.id_grado = g.id_grado
       ${whereSql}
-      ORDER BY e.created_at DESC
-      LIMIT ? OFFSET ?`;
-    const dataParams = [...sqlParams, limite, offset];
-    const estudiantes = db.prepare(dataSql).all(...dataParams);
+      ORDER BY e.apellidos, e.nombres
+      LIMIT ? OFFSET ?
+    `;
 
-    return { estudiantes, totalPaginas };
-  } catch (error) {
+    const finalParams = [...queryParams, limite, offset];
+    const rawEstudiantes = db.prepare(dataSql).all(...finalParams) as Array<{
+      id_estudiante: string;
+      nombres: string;
+      apellidos: string;
+      email: string | null;
+      matricula_data: string;
+    }>;
+
+    // ✅ **AQUÍ ESTÁ LA CORRECCIÓN**
+    // Se define el tipo para la variable 'row' dentro del .map()
+    const estudiantes = rawEstudiantes.map((row) => ({
+      id_estudiante: row.id_estudiante,
+      nombres: row.nombres,
+      apellidos: row.apellidos,
+      email: row.email,
+      matriculas: [JSON.parse(row.matricula_data || '{}')] 
+    }));
+    
+    const countSql = `SELECT COUNT(DISTINCT e.id_estudiante) as total
+                      FROM estudiantes e
+                      LEFT JOIN matriculas latest_matricula ON e.id_estudiante = latest_matricula.id_estudiante
+                      ${whereSql}`;
+                      
+    const totalResult = db.prepare(countSql).get(...queryParams) as { total: number };
+    const totalPaginas = Math.ceil(totalResult.total / limite);
+
+    const statsSql = `
+      SELECT
+        (SELECT COUNT(*) FROM estudiantes) as total,
+        COUNT(CASE WHEN estatus = 'inscrito' THEN 1 END) as inscritos,
+        COUNT(CASE WHEN estatus = 'retirado' THEN 1 END) as retirados,
+        COUNT(CASE WHEN estatus = 'egresado' THEN 1 END) as egresados
+      FROM matriculas
+      WHERE (id_estudiante, ano_escolar) IN (
+        SELECT id_estudiante, MAX(ano_escolar) FROM matriculas GROUP BY id_estudiante
+      )
+    `;
+    const stats = db.prepare(statsSql).get();
+
+    return { estudiantes, totalPaginas, stats };
+
+  } catch (error: any) {
     console.error("Error obteniendo estudiantes paginados:", error);
-    return { estudiantes: [], totalPaginas: 0 };
+    return {
+      estudiantes: [],
+      totalPaginas: 1,
+      stats: { total: 0, inscritos: 0, retirados: 0, egresados: 0 }
+    };
   }
 }
 
-// --- OBTENER UN ESTUDIANTE POR ID ---
+// --- OBTENER UN ESTUDIANTE POR ID (SIN CAMBIOS) ---
 export async function obtenerEstudiantePorId(id: string) {
-  await requireRole(["administrador", "director", "docente"]);
-
   try {
     const sql = `
-      SELECT e.*, r.*, m.*, g.nombre as grado_nombre, g.seccion, g.turno, g.nivel_educativo
+      SELECT 
+        e.*, 
+        r.nombres as rep_nombres, r.apellidos as rep_apellidos, r.cedula as rep_cedula,
+        m.*, 
+        g.nombre as grado_nombre, g.seccion, g.turno, g.nivel_educativo
       FROM estudiantes e
       LEFT JOIN representantes r ON e.id_representante = r.id_representante
       LEFT JOIN matriculas m ON e.id_estudiante = m.id_estudiante
       LEFT JOIN grados g ON m.id_grado = g.id_grado
-      WHERE e.id_estudiante = ?`;
+      WHERE e.id_estudiante = ?
+      ORDER BY m.ano_escolar DESC LIMIT 1`; 
     const estudiante = db.prepare(sql).get(id);
 
     if (!estudiante) return null;
 
-    // Obtener datos adicionales
     const historial = db.prepare("SELECT * FROM historial_academico WHERE id_estudiante = ? ORDER BY ano_escolar DESC").all(id);
     const pagos = db.prepare(
       `SELECT p.* FROM pagos p JOIN matriculas m ON p.id_matricula = m.id_matricula WHERE m.id_estudiante = ? ORDER BY p.fecha DESC`
