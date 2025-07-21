@@ -277,15 +277,15 @@ export default async function EstudianteDetallePage({ params }: PageProps) {
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-6 bg-gradient-to-r from-slate-50 to-blue-50 dark:from-slate-800/50 dark:to-slate-700/50 rounded-2xl">
                     <div className="space-y-2">
                       <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                        {matricula.grados?.nombre} - Sección {matricula.grados?.seccion}
+                        {matricula.grado?.nombre} - Sección {matricula.grado?.seccion}
                       </h3>
                       <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
                         <span className="flex items-center gap-1">
                           <BookOpen className="w-4 h-4" />
-                          {matricula.grados?.nivel_educativo}
+                          {matricula.grado?.nivel_educativo}
                         </span>
                         <span>•</span>
-                        <span>Turno {matricula.grados?.turno}</span>
+                        <span>Turno {matricula.grado?.turno}</span>
                       </div>
                     </div>
                     <Badge className={`text-sm px-4 py-2 ${getBadgeStyle(matricula.estatus)}`}>

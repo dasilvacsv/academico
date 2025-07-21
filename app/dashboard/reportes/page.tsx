@@ -1,42 +1,28 @@
-import React, { Suspense } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { obtenerMetricasCompletas } from "@/actions/academicos.actions"
+
+import React from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { obtenerMetricasCompletas } from "@/actions/academicos.actions";
+import { BotonDescargaPDF } from './BotonDescargaPDF'; 
 import { 
-  BarChart3, 
-  Users, 
-  GraduationCap, 
-  BookOpen, 
-  TrendingUp, 
-  Calendar,
-  DollarSign,
-  Award,
-  Clock,
-  Target,
-  Activity,
-  PieChart,
-  Building,
-  UserCheck,
-  School,
-  Baby,
-  Heart
-} from "lucide-react"
+  BarChart3, Users, GraduationCap, BookOpen, TrendingUp, 
+  Award, Clock, Target, UserCheck, School, Baby, Heart, Building
+} from "lucide-react";
 
 export default async function ReportesPage() {
-  const metricas = await obtenerMetricasCompletas()
+  const metricas = await obtenerMetricasCompletas();
 
+  // Estado de error si las métricas no se pueden cargar
   if (!metricas) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-pink-50 dark:from-slate-950 dark:via-red-950 dark:to-pink-950 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <p className="text-red-600 dark:text-red-400">Error al cargar las métricas del sistema</p>
-          </div>
+        <div className="max-w-7xl mx-auto text-center py-12">
+          <p className="text-red-600 dark:text-red-400">Error al cargar las métricas del sistema.</p>
         </div>
       </div>
-    )
+    );
   }
-
+  
   const {
     metricas_generales,
     distribucion_genero,
@@ -45,10 +31,9 @@ export default async function ReportesPage() {
     grados_ocupacion,
     docentes_especialidad,
     asignaciones_docentes,
-    pagos_por_mes,
-    estudiantes_por_edad,
     rendimiento_academico,
-  } = metricas
+    estudiantes_por_edad,
+  } = metricas;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 dark:from-slate-950 dark:via-indigo-950 dark:to-purple-950 p-6">
@@ -56,7 +41,7 @@ export default async function ReportesPage() {
         {/* Header Section */}
         <div className="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl shadow-2xl">
           <div className="absolute inset-0 bg-black/20"></div>
-          <div className="relative px-8 py-12">
+          <div className="relative px-8 py-12 flex justify-between items-center">
             <div className="flex items-center space-x-4">
               <div className="p-4 bg-white/20 backdrop-blur-lg rounded-2xl">
                 <BarChart3 className="h-10 w-10 text-white" />
@@ -66,6 +51,8 @@ export default async function ReportesPage() {
                 <p className="text-indigo-100 text-lg">Análisis completo del sistema educativo</p>
               </div>
             </div>
+            {/* --- Componente de Cliente para el Botón de Descarga --- */}
+            <BotonDescargaPDF metricas={metricas} />
           </div>
         </div>
 
@@ -154,7 +141,7 @@ export default async function ReportesPage() {
           <CardContent className="p-8">
             <div className="grid gap-6 md:grid-cols-3">
               {distribucion_nivel.map((nivel: any) => {
-                const ocupacion = nivel.capacidad_total > 0 ? (nivel.estudiantes / nivel.capacidad_total) * 100 : 0
+                const ocupacion = nivel.capacidad_total > 0 ? (nivel.estudiantes / nivel.capacidad_total) * 100 : 0;
                 return (
                   <div key={nivel.nivel_educativo} className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300">
                     <div className="flex items-center justify-between mb-4">
@@ -165,7 +152,6 @@ export default async function ReportesPage() {
                         {nivel.grados_disponibles} grados
                       </Badge>
                     </div>
-                    
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm text-slate-600 dark:text-slate-400">Estudiantes:</span>
@@ -173,7 +159,6 @@ export default async function ReportesPage() {
                           {nivel.estudiantes || 0} / {nivel.capacidad_total}
                         </span>
                       </div>
-                      
                       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
                         <div
                           className={`h-3 rounded-full transition-all duration-1000 ${
@@ -186,7 +171,6 @@ export default async function ReportesPage() {
                           style={{ width: `${Math.min(ocupacion, 100)}%` }}
                         ></div>
                       </div>
-                      
                       <div className="flex justify-between text-sm">
                         <span className="text-slate-600 dark:text-slate-400">Ocupación:</span>
                         <span className={`font-semibold ${
@@ -226,9 +210,8 @@ export default async function ReportesPage() {
             <CardContent className="p-8">
               <div className="space-y-6">
                 {distribucion_genero.map((genero: any) => {
-                  const total = distribucion_genero.reduce((sum: number, g: any) => sum + g.cantidad, 0)
-                  const porcentaje = total > 0 ? (genero.cantidad / total) * 100 : 0
-                  
+                  const total = distribucion_genero.reduce((sum: number, g: any) => sum + g.cantidad, 0);
+                  const porcentaje = total > 0 ? (genero.cantidad / total) * 100 : 0;
                   return (
                     <div key={genero.genero} className="space-y-3">
                       <div className="flex justify-between items-center">
@@ -257,7 +240,6 @@ export default async function ReportesPage() {
                           </p>
                         </div>
                       </div>
-                      
                       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all duration-1000 ${
@@ -294,9 +276,8 @@ export default async function ReportesPage() {
             <CardContent className="p-8">
               <div className="space-y-6">
                 {distribucion_turno.map((turno: any) => {
-                  const total = distribucion_turno.reduce((sum: number, t: any) => sum + t.estudiantes, 0)
-                  const porcentaje = total > 0 ? (turno.estudiantes / total) * 100 : 0
-                  
+                  const total = distribucion_turno.reduce((sum: number, t: any) => sum + t.estudiantes, 0);
+                  const porcentaje = total > 0 ? (turno.estudiantes / total) * 100 : 0;
                   return (
                     <div key={turno.turno} className="space-y-3">
                       <div className="flex justify-between items-center">
@@ -325,7 +306,6 @@ export default async function ReportesPage() {
                           </p>
                         </div>
                       </div>
-                      
                       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all duration-1000 ${
@@ -386,7 +366,6 @@ export default async function ReportesPage() {
                       {grado.porcentaje_ocupacion}%
                     </Badge>
                   </div>
-                  
                   <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-1000 ${
@@ -472,7 +451,6 @@ export default async function ReportesPage() {
                     </p>
                     <p className="text-sm text-emerald-600 dark:text-emerald-400">Con Docente</p>
                   </div>
-                  
                   <div className="text-center p-6 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 rounded-xl border border-amber-200 dark:border-amber-800">
                     <div className="p-3 bg-amber-100 dark:bg-amber-900 rounded-full w-fit mx-auto mb-3">
                       <Building className="h-6 w-6 text-amber-600 dark:text-amber-400" />
@@ -483,7 +461,6 @@ export default async function ReportesPage() {
                     <p className="text-sm text-amber-600 dark:text-amber-400">Sin Docente</p>
                   </div>
                 </div>
-                
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-600 dark:text-slate-400">Progreso de asignaciones:</span>
@@ -491,7 +468,6 @@ export default async function ReportesPage() {
                       {Math.round((asignaciones_docentes.grados_con_docente / asignaciones_docentes.total_grados) * 100)}%
                     </span>
                   </div>
-                  
                   <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
                     <div
                       className="bg-gradient-to-r from-emerald-500 to-teal-600 h-3 rounded-full transition-all duration-1000"
@@ -526,9 +502,8 @@ export default async function ReportesPage() {
           <CardContent className="p-8">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               {estudiantes_por_edad.map((edad: any, index: number) => {
-                const total = estudiantes_por_edad.reduce((sum: number, e: any) => sum + e.cantidad, 0)
-                const porcentaje = total > 0 ? (edad.cantidad / total) * 100 : 0
-                
+                const total = estudiantes_por_edad.reduce((sum: number, e: any) => sum + e.cantidad, 0);
+                const porcentaje = total > 0 ? (edad.cantidad / total) * 100 : 0;
                 return (
                   <div key={index} className="text-center p-6 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300">
                     <div className="p-3 bg-cyan-100 dark:bg-cyan-900 rounded-full w-fit mx-auto mb-3">
@@ -579,7 +554,6 @@ export default async function ReportesPage() {
                   </p>
                   <p className="text-sm text-green-600 dark:text-green-400">Promedio General</p>
                 </div>
-                
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 rounded-lg border border-blue-200 dark:border-blue-800">
                     <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Excelente (18-20):</span>
@@ -587,21 +561,18 @@ export default async function ReportesPage() {
                       {rendimiento_academico.excelente} estudiantes
                     </Badge>
                   </div>
-                  
                   <div className="flex justify-between items-center p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 rounded-lg border border-emerald-200 dark:border-emerald-800">
                     <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">Bueno (14-17):</span>
                     <Badge variant="outline" className="bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700">
                       {rendimiento_academico.bueno} estudiantes
                     </Badge>
                   </div>
-                  
                   <div className="flex justify-between items-center p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 rounded-lg border border-amber-200 dark:border-amber-800">
                     <span className="text-sm font-medium text-amber-700 dark:text-amber-300">Regular (10-13):</span>
                     <Badge variant="outline" className="bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700">
                       {rendimiento_academico.regular} estudiantes
                     </Badge>
                   </div>
-                  
                   <div className="flex justify-between items-center p-3 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-950 dark:to-pink-950 rounded-lg border border-red-200 dark:border-red-800">
                     <span className="text-sm font-medium text-red-700 dark:text-red-300">Deficiente (&lt;10):</span>
                     <Badge variant="outline" className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700">
@@ -615,5 +586,5 @@ export default async function ReportesPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
