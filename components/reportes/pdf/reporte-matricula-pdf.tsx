@@ -206,7 +206,7 @@ export default function ReporteMatriculaPDF({ data, filtros, resumen }: ReporteM
               </View>
               <View style={{ marginLeft: 15 }}>
                 <Text style={styles.schoolInfo}>Sistema de información para el  registro de matrícula escolar</Text>
-                <Text style={styles.schoolDetails}>Liceo Bolivariano</Text>
+                <Text style={styles.schoolDetails}>Complejo Educativo</Text>
                 <Text style={styles.schoolDetails}>RIF: J-12345678-9</Text>
                 <Text style={styles.schoolDetails}>contacto@liceo.edu.ve</Text>
               </View>

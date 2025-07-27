@@ -76,13 +76,21 @@ export function AppSidebar({ user }: { user: User | null }) {
       <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/5 rounded-full blur-2xl"></div>
       <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-400/5 rounded-full blur-2xl"></div>
       
-      {/* Header */}
+      {/* Header con logo modificado */}
       <div className="relative flex items-center h-16 border-b border-slate-200/60 dark:border-slate-700/60 px-4 shrink-0">
         <Link href="/dashboard" className="flex items-center gap-3 font-semibold group">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl blur-lg opacity-20 group-hover:opacity-30 transition-opacity"></div>
-            <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-2.5 rounded-xl">
-              <GraduationCap className="h-6 w-6 text-white" />
+            {/* Contenedor circular blanco para el logo */}
+            <div className="relative bg-white p-1.5 rounded-full shadow-sm">
+              {/* Logo con fondo circular */}
+              <div className="bg-white rounded-full w-9 h-9 flex items-center justify-center overflow-hidden">
+                <img 
+                  src="/matute.png" 
+                  alt="Logo" 
+                  className="w-7 h-7 object-contain" 
+                />
+              </div>
             </div>
           </div>
           {!isCollapsed && (

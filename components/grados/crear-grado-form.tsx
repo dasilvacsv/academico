@@ -14,42 +14,58 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { crearGrado } from "@/actions/academicos.actions"
+import { crearGrado } from "@/actions/academicos.actions" // Se asume que esta acción está correctamente implementada
 import { Loader2, Plus, BookOpen, CheckCircle, AlertCircle } from "lucide-react"
 
 interface CrearGradoFormProps {
-  userRole: string // Nuevo prop para el rol
+  userRole: string // Prop para verificar el rol del usuario
 }
 
+/**
+ * Componente de formulario para crear un nuevo Grado/Año.
+ * Adaptado para una base de datos SQLite con niveles educativos específicos.
+ * Solo visible para usuarios con el rol de "administrador".
+ */
 export function CrearGradoForm({ userRole }: CrearGradoFormProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
-  // Verificar si el usuario es administrador
+  // -- Verificación de Rol --
+  // El componente solo se renderiza si el usuario es administrador.
   const isAdmin = userRole === "administrador"
-  if (!isAdmin) return null // Ocultar completamente si no es administrador
+  if (!isAdmin) return null
 
+  /**
+   * Maneja el envío del formulario.
+   * Llama a la server action `crearGrado` y gestiona los estados de carga y mensajes.
+   * @param {FormData} formData - Los datos del formulario.
+   */
   async function handleSubmit(formData: FormData) {
     setIsLoading(true)
     setMessage(null)
 
     try {
+      // Llama a la server action para crear el grado en la base de datos.
       const result = await crearGrado(formData)
+      
       if (result?.error) {
         setMessage({ type: "error", text: result.error })
       } else if (result?.success) {
         setMessage({ type: "success", text: result.success })
-        // Reset form
+        
+        // Resetea el formulario en caso de éxito.
         const form = document.getElementById("crear-grado-form") as HTMLFormElement
         form?.reset()
+        
+        // Cierra el diálogo después de un breve momento para que el usuario vea el mensaje.
         setTimeout(() => {
           setIsOpen(false)
           setMessage(null)
         }, 1500)
       }
     } catch (err) {
-      setMessage({ type: "error", text: "Error inesperado. Intenta nuevamente." })
+      setMessage({ type: "error", text: "Ocurrió un error inesperado. Por favor, intenta nuevamente." })
     } finally {
       setIsLoading(false)
     }
@@ -74,13 +90,14 @@ export function CrearGradoForm({ userRole }: CrearGradoFormProps) {
                 Crear Nuevo Grado
               </DialogTitle>
               <DialogDescription className="text-slate-600 dark:text-slate-400">
-                Configura un nuevo grado o sección
+                Configura un nuevo año, sección y turno.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
         <form id="crear-grado-form" action={handleSubmit} className="space-y-6">
+          {/* Contenedor para mostrar mensajes de éxito o error */}
           {message && (
             <Alert 
               variant={message.type === "error" ? "destructive" : "default"}
@@ -98,6 +115,7 @@ export function CrearGradoForm({ userRole }: CrearGradoFormProps) {
           )}
 
           <div className="grid grid-cols-2 gap-4">
+            {/* Campo: Nivel Educativo (Adaptado) */}
             <div className="space-y-2">
               <Label htmlFor="nivel_educativo" className="text-sm font-medium">
                 Nivel Educativo *
@@ -107,28 +125,35 @@ export function CrearGradoForm({ userRole }: CrearGradoFormProps) {
                   <SelectValue placeholder="Seleccionar nivel" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Inicial">Inicial</SelectItem>
-                  <SelectItem value="Primaria">Primaria</SelectItem>
-                  <SelectItem value="Media">Media</SelectItem>
+                  <SelectItem value="Educación Media General">Educación Media General</SelectItem>
+                  <SelectItem value="Educación Media Técnica">Educación Media Técnica</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Campo: Nombre del Grado/Año (Adaptado a Select) */}
             <div className="space-y-2">
               <Label htmlFor="nombre" className="text-sm font-medium">
-                Nombre del Grado *
+                Año *
               </Label>
-              <Input
-                id="nombre"
-                name="nombre"
-                placeholder="Ej: 1er Grado"
-                required
-                disabled={isLoading}
-              />
+              <Select name="nombre" required disabled={isLoading}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar año"/>
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="1er Año">1er Año</SelectItem>
+                    <SelectItem value="2do Año">2do Año</SelectItem>
+                    <SelectItem value="3er Año">3er Año</SelectItem>
+                    <SelectItem value="4to Año">4to Año</SelectItem>
+                    <SelectItem value="5to Año">5to Año</SelectItem>
+                    <SelectItem value="6to Año">6to Año</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            {/* Campo: Sección */}
             <div className="space-y-2">
               <Label htmlFor="seccion" className="text-sm font-medium">
                 Sección *
@@ -147,6 +172,7 @@ export function CrearGradoForm({ userRole }: CrearGradoFormProps) {
               </Select>
             </div>
 
+            {/* Campo: Turno */}
             <div className="space-y-2">
               <Label htmlFor="turno" className="text-sm font-medium">
                 Turno *
@@ -164,6 +190,7 @@ export function CrearGradoForm({ userRole }: CrearGradoFormProps) {
             </div>
           </div>
 
+          {/* Campo: Capacidad Máxima */}
           <div className="space-y-2">
             <Label htmlFor="capacidad_maxima" className="text-sm font-medium">
               Capacidad Máxima *
@@ -173,13 +200,15 @@ export function CrearGradoForm({ userRole }: CrearGradoFormProps) {
               name="capacidad_maxima"
               type="number"
               min="1"
-              max="40"
-              placeholder="30"
+              max="50" // Aumentado el máximo por si acaso
+              placeholder="Ej: 35"
               required
               disabled={isLoading}
+              className="dark:bg-slate-800 dark:border-slate-700"
             />
           </div>
 
+          {/* Botones de Acción */}
           <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
             <Button 
               type="button"

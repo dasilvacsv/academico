@@ -1,5 +1,8 @@
+import Image from "next/image";
+// 👇 Se importa la imagen como un módulo desde la carpeta 'assets'
+import matuteLogo from "../assets/matute.png"; 
 import { LoginForm } from "@/components/auth/login-form";
-import { GraduationCap, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 export default function LoginPage() {
   return (
@@ -28,12 +31,20 @@ export default function LoginPage() {
                     <div className="relative mb-8">
                       <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur-lg opacity-20"></div>
                       <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-2xl">
-                        <GraduationCap className="h-16 w-16 text-white mx-auto" />
+                        {/* 👇 Se usa la variable importada 'matuteLogo' */}
+                        <Image
+                          src={matuteLogo}
+                          alt="Logo Matute"
+                          width={64}
+                          height={64}
+                          className="mx-auto"
+                          priority
+                        />
                       </div>
                     </div>
                     
                     <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-                      Sistema de información para el  registro de matrícula escolar
+                      Sistema de información para el registro de matrícula escolar
                     </h1>
                     
                     <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
@@ -55,7 +66,14 @@ export default function LoginPage() {
                 <div className="relative mb-6">
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl blur-lg opacity-20"></div>
                   <div className="relative bg-gradient-to-r from-blue-600 to-purple-600 p-4 rounded-xl inline-block">
-                    <GraduationCap className="h-10 w-10 text-white" />
+                    {/* 👇 Se usa la variable importada también aquí */}
+                    <Image
+                      src={matuteLogo}
+                      alt="Logo Matute"
+                      width={40}
+                      height={40}
+                      priority
+                    />
                   </div>
                 </div>
                 <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">

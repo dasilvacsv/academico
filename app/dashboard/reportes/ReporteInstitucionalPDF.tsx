@@ -180,7 +180,7 @@ export function ReporteInstitucionalPDF({ metricas }: ReporteInstitucionalPDFPro
         {/* Encabezado */}
         <View style={styles.header}>
           <View style={styles.schoolInfo}>
-            <Text style={styles.schoolName}>Liceo Bolivariano José Manuel Matute Salazar</Text>
+            <Text style={styles.schoolName}>Complejo Educativo José Manuel Matute Salazar</Text>
             <Text style={styles.schoolDetails}>RIF: J-12345678-9 | Anaco, Anzoátegui, Venezuela</Text>
             <Text style={styles.schoolDetails}>Año Escolar: 2024-2025</Text>
           </View>
@@ -339,7 +339,7 @@ export function ReporteInstitucionalPDF({ metricas }: ReporteInstitucionalPDFPro
         {/* Pie de página */}
         <View style={styles.footer} fixed>
           <Text style={styles.footerText}>
-            Reporte generado por el Sistema de Gestión Académica | Liceo Bolivariano José Manuel Matute Salazar
+            Reporte generado por el Sistema de Gestión Académica | Complejo Educativo José Manuel Matute Salazar
           </Text>
           <Text style={styles.footerText} render={({ pageNumber, totalPages }) => (
             `Página ${pageNumber} de ${totalPages}`
