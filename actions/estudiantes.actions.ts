@@ -98,6 +98,7 @@ export async function registrarEstudiante(formData: FormData) {
   }
 }
 
+// --- ACTUALIZAR ESTUDIANTE ---
 export async function actualizarEstudiante(id_estudiante: string, formData: FormData) {
   await requireRole(["administrador", "director"]);
 
@@ -146,7 +147,6 @@ export async function actualizarEstudiante(id_estudiante: string, formData: Form
     // Actualizar representante (si existe)
     if (representanteData.id) {
       const updateRepStmt = db.prepare(
-        // 👇 AQUÍ ESTÁ LA CORRECCIÓN
         `UPDATE representantes SET
           nombres = ?, apellidos = ?, cedula = ?, telefono = ?,
           correo_electronico = ?, direccion = ?, parentesco = ?, ocupacion = ?
@@ -171,7 +171,7 @@ export async function actualizarEstudiante(id_estudiante: string, formData: Form
   }
 }
 
-// --- OBTENER ESTUDIANTES PAGINADOS (FUNCIÓN CON CORRECCIÓN DE TIPO) ---
+// --- OBTENER ESTUDIANTES PAGINADOS (VERSIÓN ACTUALIZADA) ---
 export async function obtenerEstudiantesPaginados(params: {
   page: number;
   limite: number;
@@ -189,9 +189,14 @@ export async function obtenerEstudiantesPaginados(params: {
       whereClauses.push("(e.nombres LIKE ? OR e.apellidos LIKE ?)");
       queryParams.push(`%${filtro}%`, `%${filtro}%`);
     }
+    
+    // MODIFICACIÓN: Si no se especifica un estatus, se excluyen los cancelados.
+    // Si se especifica un estatus (incluido 'cancelado'), se filtra por ese estatus.
     if (estatus) {
       whereClauses.push("latest_matricula.estatus = ?");
       queryParams.push(estatus);
+    } else {
+      whereClauses.push("latest_matricula.estatus != 'cancelado'");
     }
     
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
@@ -223,9 +228,7 @@ export async function obtenerEstudiantesPaginados(params: {
       email: string | null;
       matricula_data: string;
     }>;
-
     
-    // Se define el tipo para la variable 'row' dentro del .map()
     const estudiantes = rawEstudiantes.map((row) => ({
       id_estudiante: row.id_estudiante,
       nombres: row.nombres,
@@ -236,7 +239,11 @@ export async function obtenerEstudiantesPaginados(params: {
     
     const countSql = `SELECT COUNT(DISTINCT e.id_estudiante) as total
                       FROM estudiantes e
-                      LEFT JOIN matriculas latest_matricula ON e.id_estudiante = latest_matricula.id_estudiante
+                      LEFT JOIN (
+                          SELECT id_estudiante, MAX(ano_escolar) as max_ano_escolar
+                          FROM matriculas GROUP BY id_estudiante
+                      ) as max_m ON e.id_estudiante = max_m.id_estudiante
+                      LEFT JOIN matriculas as latest_matricula ON max_m.id_estudiante = latest_matricula.id_estudiante AND max_m.max_ano_escolar = latest_matricula.ano_escolar
                       ${whereSql}`;
                       
     const totalResult = db.prepare(countSql).get(...queryParams) as { total: number };
@@ -247,7 +254,8 @@ export async function obtenerEstudiantesPaginados(params: {
         (SELECT COUNT(*) FROM estudiantes) as total,
         COUNT(CASE WHEN estatus = 'inscrito' THEN 1 END) as inscritos,
         COUNT(CASE WHEN estatus = 'retirado' THEN 1 END) as retirados,
-        COUNT(CASE WHEN estatus = 'egresado' THEN 1 END) as egresados
+        COUNT(CASE WHEN estatus = 'egresado' THEN 1 END) as egresados,
+        COUNT(CASE WHEN estatus = 'cancelado' THEN 1 END) as cancelados
       FROM matriculas
       WHERE (id_estudiante, ano_escolar) IN (
         SELECT id_estudiante, MAX(ano_escolar) FROM matriculas GROUP BY id_estudiante
@@ -262,16 +270,16 @@ export async function obtenerEstudiantesPaginados(params: {
     return {
       estudiantes: [],
       totalPaginas: 1,
-      stats: { total: 0, inscritos: 0, retirados: 0, egresados: 0 }
+      stats: { total: 0, inscritos: 0, retirados: 0, egresados: 0, cancelados: 0 }
     };
   }
 }
 
 // --- OBTENER UN ESTUDIANTE POR ID ---
 export async function obtenerEstudiantePorId(id: string) {
-  try {
+  try {
   
-    const sql = `
+    const sql = `
   SELECT 
     e.*,
     json_object(
@@ -287,7 +295,6 @@ export async function obtenerEstudiantePorId(id: string) {
             'id_matricula', m.id_matricula, 'ano_escolar', m.ano_escolar,
             'fecha_matricula', m.fecha_matricula, 'estatus', m.estatus,
             'observaciones', m.observaciones,
-            -- 👇 CORRECCIÓN AQUÍ: Se cambió 'grados' por 'grado'
             'grado', json_object(
               'nombre', g.nombre, 'seccion', g.seccion,
               'turno', g.turno, 'nivel_educativo', g.nivel_educativo
@@ -303,32 +310,113 @@ export async function obtenerEstudiantePorId(id: string) {
   GROUP BY e.id_estudiante
 `;
 
-    const row = db.prepare(sql).get(id) as any;
+    const row = db.prepare(sql).get(id) as any;
 
-    if (!row) return null;
+    if (!row) return null;
 
-    // Parsear los datos JSON de la base de datos
-    const matriculas_parsed = JSON.parse(row.matriculas_data || '[]').filter((m: any) => m !== null);
+    // Parsear los datos JSON de la base de datos
+    const matriculas_parsed = JSON.parse(row.matriculas_data || '[]').filter((m: any) => m !== null);
 
-    const estudiante = {
-      ...row,
-      representantes: JSON.parse(row.representante_data || '{}'),
+    const estudiante = {
+      ...row,
+      representantes: JSON.parse(row.representante_data || '{}'),
       // Ordenar y asegurarse de que no haya nulos en el array
-      matriculas: matriculas_parsed.sort((a: any, b: any) => b.ano_escolar.localeCompare(a.ano_escolar)),
-    };
+      matriculas: matriculas_parsed.sort((a: any, b: any) => b.ano_escolar.localeCompare(a.ano_escolar)),
+    };
 
-    // Limpiar propiedades de datos JSON sin procesar
-    delete estudiante.representante_data;
-    delete estudiante.matriculas_data;
+    // Limpiar propiedades de datos JSON sin procesar
+    delete estudiante.representante_data;
+    delete estudiante.matriculas_data;
 
-    const historial = db.prepare("SELECT * FROM historial_academico WHERE id_estudiante = ? ORDER BY ano_escolar DESC").all(id);
-    const pagos = db.prepare(
-      `SELECT p.* FROM pagos p JOIN matriculas m ON p.id_matricula = m.id_matricula WHERE m.id_estudiante = ? ORDER BY p.fecha DESC`
-    ).all(id);
+    const historial = db.prepare("SELECT * FROM historial_academico WHERE id_estudiante = ? ORDER BY ano_escolar DESC").all(id);
+    const pagos = db.prepare(
+      `SELECT p.* FROM pagos p JOIN matriculas m ON p.id_matricula = m.id_matricula WHERE m.id_estudiante = ? ORDER BY p.fecha DESC`
+    ).all(id);
 
-    return { ...estudiante, historial_academico: historial, pagos };
-  } catch (error) {
-    console.error("Error obteniendo estudiante:", error);
-    return null;
-  }
+    return { ...estudiante, historial_academico: historial, pagos };
+  } catch (error) {
+    console.error("Error obteniendo estudiante:", error);
+    return null;
+  }
+}
+
+// --- NUEVA ACCIÓN: CANCELAR INSCRIPCIÓN DE ESTUDIANTE ---
+export async function cancelarInscripcionEstudiante(id_estudiante: string) {
+    await requireRole(["administrador"]);
+
+    try {
+        // 1. Encontrar la matrícula más reciente del estudiante
+        const latestMatriculaStmt = db.prepare(`
+            SELECT id_matricula FROM matriculas 
+            WHERE id_estudiante = ? 
+            ORDER BY ano_escolar DESC 
+            LIMIT 1
+        `);
+        const matricula = latestMatriculaStmt.get(id_estudiante) as { id_matricula: string } | undefined;
+
+        if (!matricula) {
+            return { error: "El estudiante no tiene una matrícula para cancelar." };
+        }
+
+        // 2. Actualizar el estado de esa matrícula a 'cancelado'
+        const updateStmt = db.prepare(`
+            UPDATE matriculas 
+            SET estatus = 'cancelado', updated_at = CURRENT_TIMESTAMP 
+            WHERE id_matricula = ?
+        `);
+        const result = updateStmt.run(matricula.id_matricula);
+
+        if (result.changes === 0) {
+            return { error: "No se pudo actualizar el estado de la matrícula." };
+        }
+
+        revalidatePath("/dashboard/estudiantes");
+        return { success: "Inscripción del estudiante cancelada exitosamente." };
+
+    } catch (error: any) {
+        console.error("Error cancelando inscripción:", error);
+        return { error: error.message || "Error interno del servidor." };
+    }
+}
+
+// --- NUEVA ACCIÓN: ELIMINAR ESTUDIANTE ---
+export async function eliminarEstudiante(id_estudiante: string) {
+    await requireRole(["administrador"]);
+
+    const transaction = db.transaction(() => {
+        // 1. Verificar que el estudiante tenga estatus 'cancelado'
+        const checkStatusStmt = db.prepare(`
+            SELECT estatus FROM matriculas 
+            WHERE id_estudiante = ? 
+            ORDER BY ano_escolar DESC 
+            LIMIT 1
+        `);
+        const matricula = checkStatusStmt.get(id_estudiante) as { estatus: string } | undefined;
+
+        if (matricula?.estatus !== 'cancelado') {
+            throw new Error("Solo se pueden eliminar estudiantes con inscripción cancelada.");
+        }
+
+        // 2. Eliminar registros dependientes (pagos, historial, matrículas)
+        db.prepare("DELETE FROM pagos WHERE id_matricula IN (SELECT id_matricula FROM matriculas WHERE id_estudiante = ?)").run(id_estudiante);
+        db.prepare("DELETE FROM historial_academico WHERE id_estudiante = ?").run(id_estudiante);
+        db.prepare("DELETE FROM matriculas WHERE id_estudiante = ?").run(id_estudiante);
+        
+        // 3. Eliminar al estudiante
+        const deleteStmt = db.prepare("DELETE FROM estudiantes WHERE id_estudiante = ?");
+        const result = deleteStmt.run(id_estudiante);
+
+        if (result.changes === 0) {
+            throw new Error("No se encontró al estudiante para eliminar.");
+        }
+    });
+
+    try {
+        transaction();
+        revalidatePath("/dashboard/estudiantes");
+        return { success: "Estudiante eliminado permanentemente." };
+    } catch (error: any) {
+        console.error("Error eliminando estudiante:", error);
+        return { error: error.message || "Error interno del servidor." };
+    }
 }

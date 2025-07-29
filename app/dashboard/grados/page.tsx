@@ -171,15 +171,7 @@ export default async function GradosPage() {
                           </div>
                         </div>
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {userRole === "administrador" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="hover:bg-blue-50 dark:hover:bg-blue-950/50 text-blue-600 dark:text-blue-400"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
+                          
                           <EliminarGradoButton 
                             gradoId={grado.id_grado}
                             nombreGrado={`${grado.nombre} - ${grado.seccion}`}

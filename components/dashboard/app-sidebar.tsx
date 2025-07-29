@@ -96,7 +96,7 @@ export function AppSidebar({ user }: { user: User | null }) {
           {!isCollapsed && (
             <div className="space-y-0.5">
               <div className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Sistema Escolar
+                C.E José Manuel Matute Salazar
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                 <Sparkles className="h-3 w-3" />
