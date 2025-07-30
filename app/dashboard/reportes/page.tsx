@@ -1,12 +1,11 @@
-
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { obtenerMetricasCompletas } from "@/actions/academicos.actions";
 import { BotonDescargaPDF } from './BotonDescargaPDF'; 
 import { 
-  BarChart3, Users, GraduationCap, BookOpen, TrendingUp, 
-  Award, Clock, Target, UserCheck, School, Baby, Heart, Building
+  BarChart3, Users, BookOpen, TrendingUp, 
+  Clock, Target, UserCheck, School, Baby, Heart, Building
 } from "lucide-react";
 
 export default async function ReportesPage() {
@@ -29,8 +28,6 @@ export default async function ReportesPage() {
     distribucion_nivel,
     distribucion_turno,
     grados_ocupacion,
-    docentes_especialidad,
-    asignaciones_docentes,
     rendimiento_academico,
     estudiantes_por_edad,
   } = metricas;
@@ -57,7 +54,7 @@ export default async function ReportesPage() {
         </div>
 
         {/* Métricas Generales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all duration-300 hover:scale-105">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -70,21 +67,6 @@ export default async function ReportesPage() {
                 </div>
                 <div className="p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
                   <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 border-emerald-200 dark:border-emerald-800 hover:shadow-lg transition-all duration-300 hover:scale-105">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Total Docentes</p>
-                  <p className="text-3xl font-bold text-emerald-900 dark:text-emerald-100">{metricas_generales.total_docentes}</p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Personal activo</p>
-                </div>
-                <div className="p-3 bg-emerald-100 dark:bg-emerald-900 rounded-full">
-                  <GraduationCap className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                 </div>
               </div>
             </CardContent>
@@ -384,104 +366,6 @@ export default async function ReportesPage() {
           </CardContent>
         </Card>
 
-        {/* Docentes por Especialidad y Asignaciones */}
-        <div className="grid gap-8 lg:grid-cols-2">
-          <Card className="overflow-hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-slate-200 dark:border-slate-700 shadow-xl">
-            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl">
-                  <GraduationCap className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                    Docentes por Especialidad
-                  </CardTitle>
-                  <CardDescription className="text-slate-600 dark:text-slate-400">
-                    Distribución del personal docente
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-8">
-              <div className="space-y-4">
-                {docentes_especialidad.map((especialidad: any, index: number) => (
-                  <div key={index} className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                        <Award className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <span className="font-medium text-slate-900 dark:text-slate-100">
-                        {especialidad.especialidad || 'Sin especialidad'}
-                      </span>
-                    </div>
-                    <Badge variant="outline" className="bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
-                      {especialidad.cantidad} docentes
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="overflow-hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-slate-200 dark:border-slate-700 shadow-xl">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-b border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
-                  <UserCheck className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                    Asignaciones Docente-Grado
-                  </CardTitle>
-                  <CardDescription className="text-slate-600 dark:text-slate-400">
-                    Estado de las asignaciones
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-8">
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="text-center p-6 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                    <div className="p-3 bg-emerald-100 dark:bg-emerald-900 rounded-full w-fit mx-auto mb-3">
-                      <UserCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
-                      {asignaciones_docentes.grados_con_docente}
-                    </p>
-                    <p className="text-sm text-emerald-600 dark:text-emerald-400">Con Docente</p>
-                  </div>
-                  <div className="text-center p-6 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 rounded-xl border border-amber-200 dark:border-amber-800">
-                    <div className="p-3 bg-amber-100 dark:bg-amber-900 rounded-full w-fit mx-auto mb-3">
-                      <Building className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">
-                      {asignaciones_docentes.total_grados - asignaciones_docentes.grados_con_docente}
-                    </p>
-                    <p className="text-sm text-amber-600 dark:text-amber-400">Sin Docente</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600 dark:text-slate-400">Progreso de asignaciones:</span>
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">
-                      {Math.round((asignaciones_docentes.grados_con_docente / asignaciones_docentes.total_grados) * 100)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                    <div
-                      className="bg-gradient-to-r from-emerald-500 to-teal-600 h-3 rounded-full transition-all duration-1000"
-                      style={{ 
-                        width: `${(asignaciones_docentes.grados_con_docente / asignaciones_docentes.total_grados) * 100}%` 
-                      }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Estudiantes por Edad */}
         <Card className="overflow-hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-slate-200 dark:border-slate-700 shadow-xl">
           <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950 dark:to-blue-950 border-b border-slate-200 dark:border-slate-700">
@@ -531,7 +415,7 @@ export default async function ReportesPage() {
             <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl">
-                  <Award className="h-6 w-6 text-white" />
+                  <TrendingUp className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">

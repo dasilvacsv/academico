@@ -66,49 +66,6 @@ export async function desasignarEstudianteDeGrado(idEstudiante: string) {
   }
 }
 
-export async function asignarDocenteAGrado(idDocente: string, idGrado: string) {
-  await requireRole(["administrador", "director"]);
-
-  try {
-    // Verificar si el grado ya tiene docente asignado
-    const existingStmt = db.prepare("SELECT * FROM grado_docente WHERE id_grado = ?");
-    const existing = existingStmt.all(idGrado) as any[];
-
-    if (existing.length > 0) {
-      // Actualizar asignación existente
-      const updateStmt = db.prepare("UPDATE grado_docente SET id_docente = ? WHERE id_grado = ?");
-      updateStmt.run(idDocente, idGrado);
-    } else {
-      // Crear nueva asignación
-      const insertStmt = db.prepare("INSERT INTO grado_docente (id_docente, id_grado) VALUES (?, ?)");
-      insertStmt.run(idDocente, idGrado);
-    }
-
-    revalidatePath("/dashboard/grados");
-    revalidatePath("/dashboard/grados/asignaciones");
-    return { success: "Docente asignado exitosamente" };
-  } catch (error: any) {
-    console.error("Error asignando docente:", error);
-    return { error: error.message || "Error interno del servidor" };
-  }
-}
-
-export async function desasignarDocenteDeGrado(idGrado: string) {
-  await requireRole(["administrador", "director"]);
-
-  try {
-    const stmt = db.prepare("DELETE FROM grado_docente WHERE id_grado = ?");
-    stmt.run(idGrado);
-
-    revalidatePath("/dashboard/grados");
-    revalidatePath("/dashboard/grados/asignaciones");
-    return { success: "Docente desasignado exitosamente" };
-  } catch (error: any) {
-    console.error("Error desasignando docente:", error);
-    return { error: error.message || "Error interno del servidor" };
-  }
-}
-
 export async function crearGrado(formData: FormData) {
   await requireRole(["administrador", "director"]);
 
@@ -210,10 +167,6 @@ export async function eliminarGrado(idGrado: string) {
     if (count > 0) {
       return { error: "No se puede eliminar un grado que tiene estudiantes asignados" };
     }
-
-    // Eliminar asignación de docente si existe
-    const deleteDocenteStmt = db.prepare("DELETE FROM grado_docente WHERE id_grado = ?");
-    deleteDocenteStmt.run(idGrado);
     
     // Eliminar el grado
     const deleteGradoStmt = db.prepare("DELETE FROM grados WHERE id_grado = ?");
@@ -228,7 +181,7 @@ export async function eliminarGrado(idGrado: string) {
 }
 
 export async function obtenerEstudiantesPorGrado(idGrado: string) {
-  await requireRole(["administrador", "director", "docente"]);
+  await requireRole(["administrador", "director"]);
 
   try {
     const anoEscolar = new Date().getFullYear().toString();
@@ -318,7 +271,7 @@ export async function obtenerEstudiantesPreInscritos() {
 }
 
 export async function obtenerGrados() {
-  await requireRole(["administrador", "director", "docente"]);
+  await requireRole(["administrador", "director"]);
 
   try {
     const anoEscolar = new Date().getFullYear().toString();
@@ -326,16 +279,10 @@ export async function obtenerGrados() {
     const sql = `
       SELECT 
         g.*,
-        d.id_docente,
-        d.nombres as docente_nombres,
-        d.apellidos as docente_apellidos,
-        d.especialidad,
         COUNT(CASE WHEN m.estatus = 'inscrito' THEN 1 END) as estudiantes_actuales
       FROM grados g
-      LEFT JOIN grado_docente gd ON g.id_grado = gd.id_grado
-      LEFT JOIN docentes d ON gd.id_docente = d.id_docente
       LEFT JOIN matriculas m ON g.id_grado = m.id_grado AND m.ano_escolar = ?
-      GROUP BY g.id_grado, d.id_docente
+      GROUP BY g.id_grado
       ORDER BY 
         CASE g.nivel_educativo 
           WHEN 'Inicial' THEN 1 
@@ -348,30 +295,7 @@ export async function obtenerGrados() {
     const stmt = db.prepare(sql);
     const data = stmt.all(anoEscolar) as any[];
 
-    // Transformar datos para compatibilidad
-    const gradosMap = new Map();
-
-    data.forEach((row) => {
-      if (!gradosMap.has(row.id_grado)) {
-        gradosMap.set(row.id_grado, {
-          ...row,
-          grado_docente: [],
-        });
-      }
-
-      if (row.id_docente) {
-        gradosMap.get(row.id_grado).grado_docente.push({
-          docentes: {
-            id_docente: row.id_docente,
-            nombres: row.docente_nombres,
-            apellidos: row.docente_apellidos,
-            especialidad: row.especialidad,
-          },
-        });
-      }
-    });
-
-    return Array.from(gradosMap.values());
+    return data;
   } catch (error) {
     console.error("Error obteniendo grados:", error);
     return [];
@@ -386,7 +310,6 @@ export async function obtenerMetricasCompletas() {
 
     // Métricas generales
     const totalEstudiantes = (db.prepare("SELECT COUNT(*) as count FROM estudiantes").get() as any).count;
-    const totalDocentes = (db.prepare("SELECT COUNT(*) as count FROM docentes").get() as any).count;
     const totalGrados = (db.prepare("SELECT COUNT(*) as count FROM grados").get() as any).count;
     const totalRepresentantes = (db.prepare("SELECT COUNT(*) as count FROM representantes").get() as any).count;
 
@@ -448,25 +371,6 @@ export async function obtenerMetricasCompletas() {
       LIMIT 10
     `).all(anoEscolar) as any[];
 
-    // Docentes por especialidad
-    const docentesEspecialidad = db.prepare(`
-      SELECT 
-        especialidad,
-        COUNT(*) as cantidad
-      FROM docentes
-      GROUP BY especialidad
-      ORDER BY cantidad DESC
-    `).all() as any[];
-
-    // Asignaciones docente-grado
-    const asignacionesDocentes = db.prepare(`
-      SELECT 
-        COUNT(CASE WHEN gd.id_docente IS NOT NULL THEN 1 END) as grados_con_docente,
-        COUNT(g.id_grado) as total_grados
-      FROM grados g
-      LEFT JOIN grado_docente gd ON g.id_grado = gd.id_grado
-    `).get() as any;
-
     // Pagos por mes (últimos 6 meses)
     const pagosPorMes = db.prepare(`
       SELECT 
@@ -512,7 +416,6 @@ export async function obtenerMetricasCompletas() {
     return {
       metricas_generales: {
         total_estudiantes: totalEstudiantes,
-        total_docentes: totalDocentes,
         total_grados: totalGrados,
         total_representantes: totalRepresentantes,
         matriculas_actuales: matriculasActuales,
@@ -522,8 +425,6 @@ export async function obtenerMetricasCompletas() {
       distribucion_nivel: distribucionNivel,
       distribucion_turno: distribucionTurno,
       grados_ocupacion: gradosOcupacion,
-      docentes_especialidad: docentesEspecialidad,
-      asignaciones_docentes: asignacionesDocentes,
       pagos_por_mes: pagosPorMes,
       estudiantes_por_edad: estudiantesPorEdad,
       rendimiento_academico: rendimientoAcademico,
@@ -599,28 +500,6 @@ export async function generarReporteMatricula(filtros: any) {
   }
 }
 
-export async function generarReporteDocentes() {
-  await requireRole(["administrador", "director"]);
-
-  try {
-    const sql = `
-      SELECT 
-        d.*,
-        1 as activo
-      FROM docentes d
-      ORDER BY d.apellidos, d.nombres
-    `;
-
-    const stmt = db.prepare(sql);
-    const data = stmt.all() as any[];
-
-    return { data, success: "Reporte de docentes generado exitosamente" };
-  } catch (error: any) {
-    console.error("Error generando reporte de docentes:", error);
-    return { error: error.message || "Error interno del servidor" };
-  }
-}
-
 export async function generarReporteGrados() {
   await requireRole(["administrador", "director"]);
 
@@ -628,13 +507,9 @@ export async function generarReporteGrados() {
     const sql = `
       SELECT 
         g.*,
-        d.nombres || ' ' || d.apellidos as docente_nombre,
-        d.especialidad,
         COUNT(m.id_matricula) as total_estudiantes,
         COUNT(CASE WHEN m.estatus = 'inscrito' THEN 1 END) as estudiantes_inscritos
       FROM grados g
-      LEFT JOIN grado_docente gd ON g.id_grado = gd.id_grado
-      LEFT JOIN docentes d ON gd.id_docente = d.id_docente
       LEFT JOIN matriculas m ON g.id_grado = m.id_grado AND m.ano_escolar = ?
       GROUP BY g.id_grado
       ORDER BY 

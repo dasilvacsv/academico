@@ -164,8 +164,6 @@ export function ReporteInstitucionalPDF({ metricas }: ReporteInstitucionalPDFPro
     distribucion_nivel,
     distribucion_turno,
     grados_ocupacion,
-    docentes_especialidad,
-    asignaciones_docentes,
     rendimiento_academico,
   } = metricas;
 
@@ -199,8 +197,8 @@ export function ReporteInstitucionalPDF({ metricas }: ReporteInstitucionalPDFPro
               <Text style={styles.metricValue}>{formatNumber(metricas_generales.total_estudiantes)}</Text>
             </View>
             <View style={styles.metricCard}>
-              <Text style={styles.metricLabel}>Total Docentes</Text>
-              <Text style={styles.metricValue}>{formatNumber(metricas_generales.total_docentes)}</Text>
+              <Text style={styles.metricLabel}>Total Grados</Text>
+              <Text style={styles.metricValue}>{formatNumber(metricas_generales.total_grados)}</Text>
             </View>
             <View style={styles.metricCard}>
               <Text style={styles.metricLabel}>Matrícula Actual</Text>
@@ -262,7 +260,7 @@ export function ReporteInstitucionalPDF({ metricas }: ReporteInstitucionalPDFPro
           </View>
         </View>
 
-        {/* Ocupación de Grados (limitado a 4 para ahorrar espacio) */}
+        {/* Ocupación de Grados (limitado a 6 para ahorrar espacio) */}
         <View style={styles.section} wrap={false}>
           <Text style={styles.sectionTitle}>Grados con Mayor Ocupación</Text>
           <View style={styles.table}>
@@ -271,7 +269,7 @@ export function ReporteInstitucionalPDF({ metricas }: ReporteInstitucionalPDFPro
               <Text style={[styles.tableHeaderCell, {width: '25%'}, styles.textAlignCenter]}>Inscritos/Cap.</Text>
               <Text style={[styles.tableHeaderCell, {width: '25%'}, styles.textAlignCenter]}>Ocupación</Text>
             </View>
-            {grados_ocupacion.slice(0, 4).map((grado: any, index: number) => (
+            {grados_ocupacion.slice(0, 6).map((grado: any, index: number) => (
               <View key={index} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
                 <Text style={[styles.tableCell, {width: '50%'}]}>{grado.grado_completo}</Text>
                 <Text style={[styles.tableCell, {width: '25%'}, styles.textAlignCenter]}>
@@ -285,55 +283,35 @@ export function ReporteInstitucionalPDF({ metricas }: ReporteInstitucionalPDFPro
           </View>
         </View>
         
-        {/* Personal Docente y Rendimiento (en una fila para ahorrar espacio) */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }} wrap={false}>
-            {/* Personal Docente */}
-            <View style={{ width: '48.5%' }}>
-                <Text style={styles.sectionTitle}>Personal Docente</Text>
-                <View style={styles.table}>
-                    <View style={styles.tableHeader}>
-                        <Text style={[styles.tableHeaderCell, styles.col_75]}>Especialidad</Text>
-                        <Text style={[styles.tableHeaderCell, styles.col_25, styles.textAlignCenter]}>Cant.</Text>
-                    </View>
-                    {docentes_especialidad.slice(0, 3).map((item: any, index: number) => (
-                    <View key={index} style={index % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
-                        <Text style={[styles.tableCell, styles.col_75]}>{item.especialidad || 'No especificada'}</Text>
-                        <Text style={[styles.tableCell, styles.col_25, styles.textAlignCenter]}>{formatNumber(item.cantidad)}</Text>
-                    </View>
-                    ))}
+        {/* Rendimiento Académico */}
+        <View style={{ width: '100%' }} wrap={false}>
+          {rendimiento_academico && rendimiento_academico.total_registros > 0 && (
+            <>
+              <Text style={styles.sectionTitle}>Rendimiento Académico</Text>
+              <View style={styles.table}>
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.tableHeaderCell, styles.col_50]}>Categoría</Text>
+                  <Text style={[styles.tableHeaderCell, styles.col_50, styles.textAlignCenter]}>N° Estudiantes</Text>
                 </View>
-            </View>
-
-            {/* Rendimiento Académico */}
-            <View style={{ width: '48.5%' }}>
-                {rendimiento_academico && rendimiento_academico.total_registros > 0 && (
-                <>
-                    <Text style={styles.sectionTitle}>Rendimiento</Text>
-                    <View style={styles.table}>
-                        <View style={styles.tableHeader}>
-                            <Text style={[styles.tableHeaderCell, styles.col_50]}>Categoría</Text>
-                            <Text style={[styles.tableHeaderCell, styles.col_50, styles.textAlignCenter]}>N° Estudiantes</Text>
-                        </View>
-                        <View style={styles.tableRow}>
-                            <Text style={[styles.tableCell, styles.col_50]}>Excelente (18-20)</Text>
-                            <Text style={[styles.tableCell, styles.col_50, styles.textAlignCenter]}>{formatNumber(rendimiento_academico.excelente)}</Text>
-                        </View>
-                        <View style={styles.tableRowAlt}>
-                            <Text style={[styles.tableCell, styles.col_50]}>Bueno (14-17)</Text>
-                            <Text style={[styles.tableCell, styles.col_50, styles.textAlignCenter]}>{formatNumber(rendimiento_academico.bueno)}</Text>
-                        </View>
-                        <View style={styles.tableRow}>
-                            <Text style={[styles.tableCell, styles.col_50]}>Regular (10-13)</Text>
-                            <Text style={[styles.tableCell, styles.col_50, styles.textAlignCenter]}>{formatNumber(rendimiento_academico.regular)}</Text>
-                        </View>
-                        <View style={styles.tableRowAlt}>
-                            <Text style={[styles.tableCell, styles.col_50]}>Deficiente (&lt;10)</Text>
-                            <Text style={[styles.tableCell, styles.col_50, styles.textAlignCenter]}>{formatNumber(rendimiento_academico.deficiente)}</Text>
-                        </View>
-                    </View>
-                </>
-                )}
-            </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableCell, styles.col_50]}>Excelente (18-20)</Text>
+                  <Text style={[styles.tableCell, styles.col_50, styles.textAlignCenter]}>{formatNumber(rendimiento_academico.excelente)}</Text>
+                </View>
+                <View style={styles.tableRowAlt}>
+                  <Text style={[styles.tableCell, styles.col_50]}>Bueno (14-17)</Text>
+                  <Text style={[styles.tableCell, styles.col_50, styles.textAlignCenter]}>{formatNumber(rendimiento_academico.bueno)}</Text>
+                </View>
+                <View style={styles.tableRow}>
+                  <Text style={[styles.tableCell, styles.col_50]}>Regular (10-13)</Text>
+                  <Text style={[styles.tableCell, styles.col_50, styles.textAlignCenter]}>{formatNumber(rendimiento_academico.regular)}</Text>
+                </View>
+                <View style={styles.tableRowAlt}>
+                  <Text style={[styles.tableCell, styles.col_50]}>Deficiente (&lt;10)</Text>
+                  <Text style={[styles.tableCell, styles.col_50, styles.textAlignCenter]}>{formatNumber(rendimiento_academico.deficiente)}</Text>
+                </View>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Pie de página */}

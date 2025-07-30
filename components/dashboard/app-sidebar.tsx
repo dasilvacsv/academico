@@ -44,7 +44,6 @@ import { LogoutButton } from "./logout-button"
 const menuItemsAdmin = [
   { title: "Dashboard", href: "/dashboard", icon: Home },
   { title: "Estudiantes", href: "/dashboard/estudiantes", icon: Users },
-  { title: "Docentes", href: "/dashboard/docentes", icon: GraduationCap },
   { title: "Grados", href: "/dashboard/grados", icon: BookOpen },
   { title: "Cupos", href: "/dashboard/cupos", icon: UserCheck },
   { title: "Reportes", href: "/dashboard/reportes", icon: FileText },

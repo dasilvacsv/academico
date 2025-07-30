@@ -2,8 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Users, GraduationCap, BookOpen, UserCheck, Clock, Building, Edit } from "lucide-react"
-import Link from "next/link"
+import { Users, BookOpen, UserCheck, Clock, Building } from "lucide-react"
 import { obtenerGrados } from "@/actions/academicos.actions"
 import { requireRole } from "@/lib/auth"
 import { EstudiantesGradoCollapsible } from "@/components/grados/estudiantes-grado-collapsible"
@@ -11,7 +10,7 @@ import { EliminarGradoButton } from "@/components/grados/eliminar-grado-button"
 import { CrearGradoForm } from "@/components/grados/crear-grado-form"
 
 export default async function GradosPage() {
-  const user = await requireRole(["administrador", "director", "docente"]);
+  const user = await requireRole(["administrador", "director"]);
   const userRole = user.rol;
 
   const grados = await obtenerGrados()
@@ -45,22 +44,12 @@ export default async function GradosPage() {
                 </div>
                 <div>
                   <h1 className="text-4xl font-bold text-white tracking-tight">Grados y Secciones</h1>
-                  <p className="text-blue-100 text-lg">Gestiona los grados, secciones y asignaciones de docentes</p>
+                  <p className="text-blue-100 text-lg">Gestiona los grados y secciones del instituto</p>
                 </div>
               </div>
             </div>
             <div className="flex gap-4">
               <CrearGradoForm userRole={userRole} />
-              
-              {/* Botón de Gestionar Asignaciones solo visible para administradores */}
-              {userRole === "administrador" && (
-                <Button asChild className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-lg transition-all duration-300 hover:scale-105">
-                  <Link href="/dashboard/grados/asignaciones">
-                    <GraduationCap className="mr-2 h-5 w-5" />
-                    Gestionar Asignaciones
-                  </Link>
-                </Button>
-              )}
             </div>
           </div>
         </div>
@@ -136,7 +125,7 @@ export default async function GradosPage() {
                 <div>
                   <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100 capitalize flex items-center gap-3">
                     <div className="p-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl">
-                      <GraduationCap className="h-6 w-6 text-white" />
+                      <BookOpen className="h-6 w-6 text-white" />
                     </div>
                     {nivelEducativo}
                   </CardTitle>
@@ -171,7 +160,6 @@ export default async function GradosPage() {
                           </div>
                         </div>
                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          
                           <EliminarGradoButton 
                             gradoId={grado.id_grado}
                             nombreGrado={`${grado.nombre} - ${grado.seccion}`}
@@ -205,42 +193,6 @@ export default async function GradosPage() {
                             ></div>
                           </div>
                         </div>
-
-                        {grado.grado_docente && grado.grado_docente.length > 0 ? (
-                          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 bg-emerald-100 dark:bg-emerald-900 rounded-lg">
-                                <GraduationCap className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                              </div>
-                              <div>
-                                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-1">
-                                  Docente titular:
-                                </p>
-                                {grado.grado_docente.map((asignacion: any) => (
-                                  <div key={asignacion.docentes.id_docente}>
-                                    <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
-                                      {asignacion.docentes.nombres} {asignacion.docentes.apellidos}
-                                    </p>
-                                    <p className="text-xs text-emerald-600 dark:text-emerald-400">
-                                      {asignacion.docentes.especialidad}
-                                    </p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
-                                <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                              </div>
-                              <p className="text-sm font-medium text-amber-700 dark:text-amber-300 italic">
-                                Sin docente asignado
-                              </p>
-                            </div>
-                          </div>
-                        )}
 
                         <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
                           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">

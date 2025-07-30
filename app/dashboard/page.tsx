@@ -3,13 +3,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
   Users, 
-  GraduationCap, 
   BookOpen, 
   UserCheck, 
   TrendingUp, 
   Calendar,
   School,
-  Award,
   FileText,
   Building,
   Phone,
@@ -20,7 +18,7 @@ import { obtenerMetricasCompletas } from "@/actions/academicos.actions"
 import { requireRole } from "@/lib/auth"
 
 export default async function DashboardPage() {
-  await requireRole(["administrador", "director", "docente"])
+  await requireRole(["administrador", "director"])
 
   const metricas = await obtenerMetricasCompletas()
 
@@ -33,11 +31,6 @@ export default async function DashboardPage() {
   }
 
   const anoActual = new Date().getFullYear()
-  
-  // Calcular porcentajes
-  const porcentajeOcupacion = metricas.metricas_generales.total_grados > 0 
-    ? Math.round((metricas.asignaciones_docentes.grados_con_docente / metricas.asignaciones_docentes.total_grados) * 100)
-    : 0
 
   return (
     <div className="space-y-8">
@@ -54,7 +47,7 @@ export default async function DashboardPage() {
                 <div>
                   <h1 className="text-4xl font-bold tracking-tight">Panel de Control</h1>
                   <p className="text-blue-100 dark:text-blue-200 text-lg">
-                    Sistema de información para el  registro de matrícula escolar - Año {anoActual}
+                    Sistema de información para el registro de matrícula escolar - Año {anoActual}
                   </p>
                 </div>
               </div>
@@ -73,7 +66,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Main Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 border-blue-200 dark:border-blue-800 hover:shadow-lg transition-all duration-300 hover:scale-105">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -88,25 +81,6 @@ export default async function DashboardPage() {
               </div>
               <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full">
                 <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 border-emerald-200 dark:border-emerald-800 hover:shadow-lg transition-all duration-300 hover:scale-105">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Docentes</p>
-                <p className="text-3xl font-bold text-emerald-900 dark:text-emerald-100">
-                  {metricas.metricas_generales.total_docentes}
-                </p>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-                  Personal activo
-                </p>
-              </div>
-              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/50 rounded-full">
-                <GraduationCap className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
               </div>
             </div>
           </CardContent>
@@ -175,20 +149,20 @@ export default async function DashboardPage() {
                 </Link>
               </Button>
               
-              <Button asChild variant="outline" className="h-16 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50">
-                <Link href="/dashboard/docentes/nuevo">
-                  <div className="flex flex-col items-center gap-2">
-                    <GraduationCap className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-sm text-emerald-700 dark:text-emerald-300">Nuevo Docente</span>
-                  </div>
-                </Link>
-              </Button>
-              
               <Button asChild variant="outline" className="h-16 border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/50">
                 <Link href="/dashboard/cupos">
                   <div className="flex flex-col items-center gap-2">
                     <UserCheck className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                     <span className="text-sm text-purple-700 dark:text-purple-300">Asignar Cupos</span>
+                  </div>
+                </Link>
+              </Button>
+              
+              <Button asChild variant="outline" className="h-16 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50">
+                <Link href="/dashboard/grados">
+                  <div className="flex flex-col items-center gap-2">
+                    <Building className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-sm text-emerald-700 dark:text-emerald-300">Gestionar Grados</span>
                   </div>
                 </Link>
               </Button>
@@ -241,90 +215,6 @@ export default async function DashboardPage() {
                       }}
                     ></div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Teacher Assignments */}
-        <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-slate-200 dark:border-slate-700 shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 border-b border-slate-200 dark:border-slate-700">
-            <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              <Award className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-              Asignaciones Docentes
-            </CardTitle>
-            <CardDescription className="text-slate-600 dark:text-slate-400">
-              Estado de las asignaciones docente-grado
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                <div>
-                  <p className="font-semibold text-emerald-900 dark:text-emerald-100">
-                    Grados con Docente
-                  </p>
-                  <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                    {metricas.asignaciones_docentes.grados_con_docente} de {metricas.asignaciones_docentes.total_grados} grados
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
-                    {porcentajeOcupacion}%
-                  </p>
-                </div>
-              </div>
-              
-              <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
-                <div
-                  className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-3 rounded-full transition-all duration-1000"
-                  style={{ width: `${porcentajeOcupacion}%` }}
-                ></div>
-              </div>
-
-              <div className="pt-4">
-                <Button asChild variant="outline" className="w-full border-emerald-200 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50">
-                  <Link href="/dashboard/grados/asignaciones">
-                    <GraduationCap className="h-4 w-4 mr-2 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-emerald-700 dark:text-emerald-300">Gestionar Asignaciones</span>
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Teachers by Specialty */}
-        <Card className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border-slate-200 dark:border-slate-700 shadow-xl">
-          <CardHeader className="bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 border-b border-slate-200 dark:border-slate-700">
-            <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-3">
-              <GraduationCap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              Docentes por Especialidad
-            </CardTitle>
-            <CardDescription className="text-slate-600 dark:text-slate-400">
-              Distribución del personal docente
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="space-y-3">
-              {metricas.docentes_especialidad.slice(0, 5).map((especialidad: any, index: number) => (
-                <div key={especialidad.especialidad} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${
-                      index === 0 ? 'from-blue-500 to-blue-600' :
-                      index === 1 ? 'from-emerald-500 to-emerald-600' :
-                      index === 2 ? 'from-purple-500 to-purple-600' :
-                      index === 3 ? 'from-amber-500 to-amber-600' :
-                      'from-pink-500 to-pink-600'
-                    }`}></div>
-                    <span className="font-medium text-slate-900 dark:text-slate-100">
-                      {especialidad.especialidad}
-                    </span>
-                  </div>
-                  <Badge variant="secondary">
-                    {especialidad.cantidad} {especialidad.cantidad === 1 ? 'docente' : 'docentes'}
-                  </Badge>
                 </div>
               ))}
             </div>
