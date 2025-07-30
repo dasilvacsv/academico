@@ -157,11 +157,6 @@ export function LoginForm() {
         </CardContent>
         
         <CardFooter className="relative flex flex-col items-center justify-center text-sm space-y-2 pt-4">
-            <p className="text-slate-600 dark:text-slate-400">¿No tienes una cuenta?{' '}
-                <Link href="/registro" className="font-medium text-blue-600 hover:underline">
-                    Regístrate aquí
-                </Link>
-            </p>
         </CardFooter>
       </Card>
     </div>
